@@ -90,3 +90,93 @@ Read-only exploration and pattern extraction. No reasoning required, just struct
 
 **Why `inherit` instead of passing `opus` directly?**
 Claude Code's `"opus"` alias maps to a specific model version. Organizations may block older opus versions while allowing newer ones. GSD returns `"inherit"` for opus-tier agents, causing them to use whatever opus version the user has configured in their session. This avoids version conflicts and silent fallbacks to Sonnet.
+
+## Custom Model Profiles (Ollama, GLM, Minimax, etc.)
+
+You can define custom model profiles for use with Ollama, OpenAI-compatible APIs, or any other LLM provider.
+
+### Option 1: Use Parent Model
+
+Set `use_parent_model: true` to make all agents use the parent session's model (useful when launching Claude Code with Ollama):
+
+```json
+{
+  "use_parent_model": true
+}
+```
+
+### Option 2: Define Custom Models
+
+Define your own model assignments in config:
+
+```json
+{
+  "model_profile": "balanced",
+  "model_profiles": {
+    "gsd-planner": {
+      "quality": "glm-5:cloud",
+      "balanced": "minimax-m2.5:cloud",
+      "budget": "qwen3-next:cloud"
+    },
+    "gsd-executor": {
+      "quality": "minimax-m2.5:cloud",
+      "balanced": "glm-5:cloud",
+      "budget": "qwen3-coder-next:cloud"
+    },
+    "gsd-phase-researcher": {
+      "quality": "glm-5:cloud",
+      "balanced": "minimax-m2.5:cloud",
+      "budget": "qwen3-next:cloud"
+    },
+    "gsd-project-researcher": {
+      "quality": "glm-5:cloud",
+      "balanced": "minimax-m2.5:cloud",
+      "budget": "qwen3-next:cloud"
+    },
+    "gsd-research-synthesizer": {
+      "quality": "minimax-m2.5:cloud",
+      "balanced": "qwen3-next:cloud",
+      "budget": "rnj-1:cloud"
+    },
+    "gsd-debugger": {
+      "quality": "minimax-m2.5:cloud",
+      "balanced": "glm-5:cloud",
+      "budget": "qwen3-coder-next:cloud"
+    },
+    "gsd-codebase-mapper": {
+      "quality": "qwen3-coder-next:cloud",
+      "balanced": "devstral-small-2:cloud",
+      "budget": "rnj-1:cloud"
+    },
+    "gsd-verifier": {
+      "quality": "minimax-m2.5:cloud",
+      "balanced": "qwen3-next:cloud",
+      "budget": "nemotron-3-nano:cloud"
+    },
+    "gsd-plan-checker": {
+      "quality": "glm-5:cloud",
+      "balanced": "minimax-m2.5:cloud",
+      "budget": "qwen3-next:cloud"
+    },
+    "gsd-integration-checker": {
+      "quality": "minimax-m2.5:cloud",
+      "balanced": "qwen3-coder-next:cloud",
+      "budget": "nemotron-3-nano:cloud"
+    }
+  }
+}
+```
+
+### Global Defaults
+
+Instead of configuring each project, you can set defaults globally in `~/.gsd/defaults.json`. These apply to all projects unless overridden.
+
+## Debugging Model Resolution
+
+Use the `resolve-model` command to see which models are being assigned:
+
+```bash
+get-shit-done-cc resolve-model all
+```
+
+This shows the current profile, whether custom profiles are loaded, and each agent's assigned model.
