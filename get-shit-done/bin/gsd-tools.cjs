@@ -159,8 +159,22 @@ function safeReadFile(filePath) {
 
 function loadConfig(cwd) {
   const configPath = path.join(cwd, '.planning', 'config.json');
+
+  // Load user-level defaults from ~/.gsd/defaults.json if available
+  const homedir = require('os').homedir();
+  const globalDefaultsPath = path.join(homedir, '.gsd', 'defaults.json');
+  let globalDefaults = {};
+  try {
+    if (fs.existsSync(globalDefaultsPath)) {
+      globalDefaults = JSON.parse(fs.readFileSync(globalDefaultsPath, 'utf-8'));
+    }
+  } catch (err) {
+    // Ignore malformed global defaults
+  }
+
   const defaults = {
     model_profile: 'balanced',
+    use_parent_model: false,
     commit_docs: true,
     search_gitignored: false,
     branching_strategy: 'none',
@@ -193,20 +207,31 @@ function loadConfig(cwd) {
     })();
 
     return {
-      model_profile: get('model_profile') ?? defaults.model_profile,
-      commit_docs: get('commit_docs', { section: 'planning', field: 'commit_docs' }) ?? defaults.commit_docs,
-      search_gitignored: get('search_gitignored', { section: 'planning', field: 'search_gitignored' }) ?? defaults.search_gitignored,
-      branching_strategy: get('branching_strategy', { section: 'git', field: 'branching_strategy' }) ?? defaults.branching_strategy,
-      phase_branch_template: get('phase_branch_template', { section: 'git', field: 'phase_branch_template' }) ?? defaults.phase_branch_template,
-      milestone_branch_template: get('milestone_branch_template', { section: 'git', field: 'milestone_branch_template' }) ?? defaults.milestone_branch_template,
-      research: get('research', { section: 'workflow', field: 'research' }) ?? defaults.research,
-      plan_checker: get('plan_checker', { section: 'workflow', field: 'plan_check' }) ?? defaults.plan_checker,
-      verifier: get('verifier', { section: 'workflow', field: 'verifier' }) ?? defaults.verifier,
+      // Project config overrides global defaults, global defaults override hardcoded
+      ...defaults,
+      ...globalDefaults,
+      ...parsed,
+      model_profile: get('model_profile') ?? globalDefaults.model_profile ?? defaults.model_profile,
+      use_parent_model: get('use_parent_model') ?? globalDefaults.use_parent_model ?? defaults.use_parent_model,
+      model_profiles: parsed.model_profiles || globalDefaults.model_profiles,
+      model_overrides: parsed.model_overrides || globalDefaults.model_overrides,
+      commit_docs: get('commit_docs', { section: 'planning', field: 'commit_docs' }) ?? globalDefaults.commit_docs ?? defaults.commit_docs,
+      search_gitignored: get('search_gitignored', { section: 'planning', field: 'search_gitignored' }) ?? globalDefaults.search_gitignored ?? defaults.search_gitignored,
+      branching_strategy: get('branching_strategy', { section: 'git', field: 'branching_strategy' }) ?? globalDefaults.branching_strategy ?? defaults.branching_strategy,
+      phase_branch_template: get('phase_branch_template', { section: 'git', field: 'phase_branch_template' }) ?? globalDefaults.phase_branch_template ?? defaults.phase_branch_template,
+      milestone_branch_template: get('milestone_branch_template', { section: 'git', field: 'milestone_branch_template' }) ?? globalDefaults.milestone_branch_template ?? defaults.milestone_branch_template,
+      research: get('research', { section: 'workflow', field: 'research' }) ?? globalDefaults.research ?? defaults.research,
+      plan_checker: get('plan_checker', { section: 'workflow', field: 'plan_check' }) ?? globalDefaults.plan_checker ?? defaults.plan_checker,
+      verifier: get('verifier', { section: 'workflow', field: 'verifier' }) ?? globalDefaults.verifier ?? defaults.verifier,
       parallelization,
-      brave_search: get('brave_search') ?? defaults.brave_search,
+      brave_search: get('brave_search') ?? globalDefaults.brave_search ?? defaults.brave_search,
     };
   } catch {
-    return defaults;
+    // If no project config, return global defaults or hardcoded
+    return {
+      ...defaults,
+      ...globalDefaults,
+    };
   }
 }
 
@@ -619,6 +644,7 @@ function cmdConfigEnsureSection(cwd, raw) {
   // Create default config (user-level defaults override hardcoded defaults)
   const hardcoded = {
     model_profile: 'balanced',
+    use_parent_model: false,
     commit_docs: true,
     search_gitignored: false,
     branching_strategy: 'none',
@@ -1428,24 +1454,32 @@ function cmdStateRecordSession(cwd, options, raw) {
 }
 
 function cmdResolveModel(cwd, agentType, raw) {
-  if (!agentType) {
-    error('agent-type required');
-  }
-
   const config = loadConfig(cwd);
   const profile = config.model_profile || 'balanced';
 
-  const agentModels = MODEL_PROFILES[agentType];
-  if (!agentModels) {
-    const result = { model: 'sonnet', profile, unknown_agent: true };
-    output(result, raw, 'sonnet');
+  // If no agent specified, show all agents' models
+  if (!agentType || agentType === 'all') {
+    const profilesTable = config.model_profiles || MODEL_PROFILES;
+    const results = {};
+
+    for (const [agent, models] of Object.entries(profilesTable)) {
+      const resolved = models[profile] || models['balanced'] || 'sonnet';
+      results[agent] = resolved === 'opus' ? 'inherit' : resolved;
+    }
+
+    output({
+      profile,
+      use_parent_model: config.use_parent_model,
+      has_custom_profiles: !!config.model_profiles,
+      agents: results
+    }, raw, JSON.stringify(results, null, 2));
     return;
   }
 
-  const resolved = agentModels[profile] || agentModels['balanced'] || 'sonnet';
-  const model = resolved === 'opus' ? 'inherit' : resolved;
-  const result = { model, profile };
-  output(result, raw, model);
+  // Use the same logic as resolveModelInternal
+  const resolved = resolveModelInternal(cwd, agentType);
+  const result = { model: resolved, profile };
+  output(result, raw, resolved);
 }
 
 function cmdFindPhase(cwd, phase, raw) {
@@ -3970,15 +4004,25 @@ function cmdScaffold(cwd, type, options, raw) {
 function resolveModelInternal(cwd, agentType) {
   const config = loadConfig(cwd);
 
-  // Check per-agent override first
+  // If use_parent_model is enabled, always use inherit (parent session's model)
+  // This enables seamless use with Ollama, Claude CLI, or any other provider
+  if (config.use_parent_model === true) {
+    return 'inherit';
+  }
+
+  // Check per-agent override first (highest priority)
   const override = config.model_overrides?.[agentType];
   if (override) {
     return override === 'opus' ? 'inherit' : override;
   }
 
-  // Fall back to profile lookup
+  // Determine which profiles table to use
+  // Custom model_profiles in config overrides the built-in MODEL_PROFILES
   const profile = config.model_profile || 'balanced';
-  const agentModels = MODEL_PROFILES[agentType];
+  const profilesTable = config.model_profiles || MODEL_PROFILES;
+
+  // Look up model from the profiles table
+  const agentModels = profilesTable[agentType];
   if (!agentModels) return 'sonnet';
   const resolved = agentModels[profile] || agentModels['balanced'] || 'sonnet';
   return resolved === 'opus' ? 'inherit' : resolved;
