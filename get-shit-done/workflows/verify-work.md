@@ -382,7 +382,7 @@ Plans must be executable prompts.
 </downstream_consumer>
 """,
   subagent_type="gsd-planner",
-  model="{planner_model}",
+  {{#planner_model}}model="{{planner_model}}"{{/planner_model}},
   description="Plan gap fixes for Phase {phase}"
 )
 ```
@@ -428,7 +428,7 @@ Return one of:
 </expected_output>
 """,
   subagent_type="gsd-plan-checker",
-  model="{checker_model}",
+  {{#checker_model}}model="{{checker_model}}"{{/checker_model}},
   description="Verify Phase {phase} fix plans"
 )
 ```
@@ -469,7 +469,7 @@ Do NOT replan from scratch unless issues are fundamental.
 </instructions>
 """,
   subagent_type="gsd-planner",
-  model="{planner_model}",
+  {{#planner_model}}model="{{planner_model}}"{{/planner_model}},
   description="Revise Phase {phase} plans"
 )
 ```

@@ -116,7 +116,7 @@ Return: ## PLANNING COMPLETE with plan path
 </output>
 ",
   subagent_type="gsd-planner",
-  model="{planner_model}",
+  {{#planner_model}}model="{{planner_model}}"{{/planner_model}},
   description="Quick plan: ${DESCRIPTION}"
 )
 ```
@@ -179,7 +179,7 @@ Skip: context compliance (no CONTEXT.md), cross-plan deps (single plan), ROADMAP
 Task(
   prompt=checker_prompt,
   subagent_type="gsd-plan-checker",
-  model="{checker_model}",
+  {{#checker_model}}model="{{checker_model}}"{{/checker_model}},
   description="Check quick plan: ${DESCRIPTION}"
 )
 ```
@@ -223,7 +223,7 @@ Return what changed.
 Task(
   prompt="First, read ~/.claude/agents/gsd-planner.md for your role and instructions.\n\n" + revision_prompt,
   subagent_type="general-purpose",
-  model="{planner_model}",
+  {{#planner_model}}model="{{planner_model}}"{{/planner_model}},
   description="Revise quick plan: ${DESCRIPTION}"
 )
 ```
@@ -258,7 +258,7 @@ Project state: @.planning/STATE.md
 </constraints>
 ",
   subagent_type="gsd-executor",
-  model="{executor_model}",
+  {{#executor_model}}model="{{executor_model}}"{{/executor_model}},
   description="Execute: ${DESCRIPTION}"
 )
 ```
@@ -297,7 +297,7 @@ Task goal: ${DESCRIPTION}
 Plan: @${QUICK_DIR}/${next_num}-PLAN.md
 Check must_haves against actual codebase. Create VERIFICATION.md at ${QUICK_DIR}/${next_num}-VERIFICATION.md.",
   subagent_type="gsd-verifier",
-  model="{verifier_model}",
+  {{#verifier_model}}model="{{verifier_model}}"{{/verifier_model}},
   description="Verify: ${DESCRIPTION}"
 )
 ```

@@ -132,7 +132,7 @@ Write to: {phase_dir}/{phase_num}-RESEARCH.md
 Task(
   prompt="First, read ~/.claude/agents/gsd-phase-researcher.md for your role and instructions.\n\n" + research_prompt,
   subagent_type="general-purpose",
-  model="{researcher_model}",
+  {{#researcher_model}}model="{{researcher_model}}"{{/researcher_model}},
   description="Research Phase {phase}"
 )
 ```
@@ -221,7 +221,7 @@ Output consumed by /gsd:execute-phase. Plans need:
 Task(
   prompt="First, read ~/.claude/agents/gsd-planner.md for your role and instructions.\n\n" + filled_prompt,
   subagent_type="general-purpose",
-  model="{planner_model}",
+  {{#planner_model}}model="{{planner_model}}"{{/planner_model}},
   description="Plan Phase {phase}"
 )
 ```
@@ -276,7 +276,7 @@ IMPORTANT: Plans MUST honor user decisions. Flag as issue if plans contradict.
 Task(
   prompt=checker_prompt,
   subagent_type="gsd-plan-checker",
-  model="{checker_model}",
+  {{#checker_model}}model="{{checker_model}}"{{/checker_model}},
   description="Verify Phase {phase} plans"
 )
 ```
@@ -324,7 +324,7 @@ Return what changed.
 Task(
   prompt="First, read ~/.claude/agents/gsd-planner.md for your role and instructions.\n\n" + revision_prompt,
   subagent_type="general-purpose",
-  model="{planner_model}",
+  {{#planner_model}}model="{{planner_model}}"{{/planner_model}},
   description="Revise Phase {phase} plans"
 )
 ```

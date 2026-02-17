@@ -67,7 +67,7 @@ API routes: {routes created}
 
 Verify cross-phase wiring and E2E user flows.",
   subagent_type="gsd-integration-checker",
-  model="{integration_checker_model}"
+  {{#integration_checker_model}}model="{{integration_checker_model}}"{{/integration_checker_model}}
 )
 ```
 

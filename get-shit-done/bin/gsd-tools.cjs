@@ -1457,14 +1457,14 @@ function cmdResolveModel(cwd, agentType, raw) {
   const config = loadConfig(cwd);
   const profile = config.model_profile || 'balanced';
 
-  // If use_parent_model is enabled, all agents use inherit
+  // If use_parent_model is enabled, all agents get null (no model parameter passed)
   if (config.use_parent_model === true) {
     const results = {};
     const allAgents = ['gsd-planner', 'gsd-roadmapper', 'gsd-executor', 'gsd-phase-researcher',
       'gsd-project-researcher', 'gsd-research-synthesizer', 'gsd-debugger', 'gsd-codebase-mapper',
       'gsd-verifier', 'gsd-plan-checker', 'gsd-integration-checker'];
     for (const agent of allAgents) {
-      results[agent] = 'inherit';
+      results[agent] = '(use parent model)'; // Don't pass model parameter
     }
     output({
       profile,
@@ -4022,10 +4022,10 @@ function cmdScaffold(cwd, type, options, raw) {
 function resolveModelInternal(cwd, agentType) {
   const config = loadConfig(cwd);
 
-  // If use_parent_model is enabled, always use inherit (parent session's model)
+  // If use_parent_model is enabled, return null to signal "don't pass model parameter"
   // This enables seamless use with Ollama, Claude CLI, or any other provider
   if (config.use_parent_model === true) {
-    return 'inherit';
+    return null;
   }
 
   // Check per-agent override first (highest priority)
@@ -4495,12 +4495,20 @@ function cmdInitQuick(cwd, description, raw) {
     }
   } catch {}
 
+  const useParentModel = config.use_parent_model === true;
+
   const result = {
-    // Models
-    planner_model: resolveModelInternal(cwd, 'gsd-planner'),
-    executor_model: resolveModelInternal(cwd, 'gsd-executor'),
-    checker_model: resolveModelInternal(cwd, 'gsd-plan-checker'),
-    verifier_model: resolveModelInternal(cwd, 'gsd-verifier'),
+    // Models - return null when using parent model (so workflow won't pass model parameter)
+    planner_model: useParentModel ? null : resolveModelInternal(cwd, 'gsd-planner'),
+    executor_model: useParentModel ? null : resolveModelInternal(cwd, 'gsd-executor'),
+    checker_model: useParentModel ? null : resolveModelInternal(cwd, 'gsd-plan-checker'),
+    verifier_model: useParentModel ? null : resolveModelInternal(cwd, 'gsd-verifier'),
+
+    // Whether to include model parameter in Task calls
+    use_parent_model: useParentModel,
+
+    // Flag to indicate whether to use parent model (omit model parameter in Task calls)
+    use_parent_model: config.use_parent_model === true,
 
     // Config
     commit_docs: config.commit_docs,

@@ -138,7 +138,7 @@ Focus ONLY on what's needed for the NEW features.
 Write to: .planning/research/{FILE}
 Use template: ~/.claude/get-shit-done/templates/research-project/{FILE}
 </output>
-", subagent_type="gsd-project-researcher", model="{researcher_model}", description="{DIMENSION} research")
+", subagent_type="gsd-project-researcher", {{#researcher_model}}model="{{researcher_model}}"{{/researcher_model}}, description="{DIMENSION} research")
 ```
 
 **Dimension-specific fields:**
@@ -162,7 +162,7 @@ Read: .planning/research/STACK.md, FEATURES.md, ARCHITECTURE.md, PITFALLS.md
 Write to: .planning/research/SUMMARY.md
 Use template: ~/.claude/get-shit-done/templates/research-project/SUMMARY.md
 Commit after writing.
-", subagent_type="gsd-research-synthesizer", model="{synthesizer_model}", description="Synthesize research")
+", subagent_type="gsd-research-synthesizer", {{#synthesizer_model}}model="{{synthesizer_model}}"{{/synthesizer_model}}, description="Synthesize research")
 ```
 
 Display key findings from SUMMARY.md:
@@ -283,7 +283,7 @@ Create roadmap for milestone v[X.Y]:
 
 Write files first, then return.
 </instructions>
-", subagent_type="gsd-roadmapper", model="{roadmapper_model}", description="Create roadmap")
+", subagent_type="gsd-roadmapper", {{#roadmapper_model}}model="{{roadmapper_model}}"{{/roadmapper_model}}, description="Create roadmap")
 ```
 
 **Handle return:**

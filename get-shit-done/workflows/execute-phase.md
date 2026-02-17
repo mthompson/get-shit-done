@@ -102,7 +102,7 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
    ```
    Task(
      subagent_type="gsd-executor",
-     model="{executor_model}",
+     {{#executor_model}}model="{{executor_model}}"{{/executor_model}},
      prompt="
        <objective>
        Execute plan {plan_number} of phase {phase_number}-{phase_name}.
@@ -286,7 +286,7 @@ Phase directory: {phase_dir}
 Phase goal: {goal from ROADMAP.md}
 Check must_haves against actual codebase. Create VERIFICATION.md.",
   subagent_type="gsd-verifier",
-  model="{verifier_model}"
+  {{#verifier_model}}model="{{verifier_model}}"{{/verifier_model}}
 )
 ```
 
