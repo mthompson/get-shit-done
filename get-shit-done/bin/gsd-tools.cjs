@@ -1457,6 +1457,24 @@ function cmdResolveModel(cwd, agentType, raw) {
   const config = loadConfig(cwd);
   const profile = config.model_profile || 'balanced';
 
+  // If use_parent_model is enabled, all agents use inherit
+  if (config.use_parent_model === true) {
+    const results = {};
+    const allAgents = ['gsd-planner', 'gsd-roadmapper', 'gsd-executor', 'gsd-phase-researcher',
+      'gsd-project-researcher', 'gsd-research-synthesizer', 'gsd-debugger', 'gsd-codebase-mapper',
+      'gsd-verifier', 'gsd-plan-checker', 'gsd-integration-checker'];
+    for (const agent of allAgents) {
+      results[agent] = 'inherit';
+    }
+    output({
+      profile,
+      use_parent_model: true,
+      has_custom_profiles: !!config.model_profiles,
+      agents: results
+    }, raw, JSON.stringify(results, null, 2));
+    return;
+  }
+
   // If no agent specified, show all agents' models
   if (!agentType || agentType === 'all') {
     const profilesTable = config.model_profiles || MODEL_PROFILES;
